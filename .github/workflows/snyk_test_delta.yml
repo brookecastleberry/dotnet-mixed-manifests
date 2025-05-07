@@ -90,18 +90,19 @@ jobs:
           echo "Running Snyk Test on relevant files:"
           while IFS= read -r file; do
             echo "Testing: $file"
-            snyk test --org=${{ secrets.SNYK_ORG_ID }} "$file"
+            snyk test --org="${{ secrets.SNYK_ORG_ID }}" --file="$file"
           done < "relevant_changed_files.txt"
         else
           echo "No relevant files found to test with Snyk."
         fi
+
 
         # Basic Snyk Delta Test on Relevant Files
         if [ -s "relevant_changed_files.txt" ]; then
           echo "Running basic Snyk Delta test on relevant files:"
           while IFS= read -r file; do
             echo "Scanning delta for: $file"
-            snyk delta --org=${{ secrets.SNYK_ORG_ID }} --base="$PREVIOUS_COMMIT" --target=HEAD "$file"
+            snyk delta --org="${{ secrets.SNYK_ORG_ID }}" --base="$PREVIOUS_COMMIT" --target=HEAD "$file"
           done < "relevant_changed_files.txt"
         else
           echo "No relevant files to run basic Snyk Delta test against."
