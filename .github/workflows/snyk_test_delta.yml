@@ -21,7 +21,7 @@ jobs:
           repository: dotnet-mixed-manifests
           ref: ${{ github.sha }} # Checkout the specific commit that triggered the push
           token: ${{ secrets.SNYK_API_TOKEN }}
-          path: instrument-software
+          fetch-depth: 0 # Fetch all history for all branches and tags
 
     - uses: actions/setup-node@v4
       with:
