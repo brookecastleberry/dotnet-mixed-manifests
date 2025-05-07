@@ -40,6 +40,11 @@ jobs:
     - name: Snyk Auth
       run: snyk auth ${{ secrets.SNYK_API_TOKEN }}
 
+    - name: Install Snyk test
+        curl -Lo ./snyk https://static.snyk.io/cli/latest/snyk-linux
+        chmod +x ./snyk
+        sudo mv ./snyk /usr/local/bin/
+
     - name: Run Snyk Test on Previous Commit
       id: snyk_base
       run: |
