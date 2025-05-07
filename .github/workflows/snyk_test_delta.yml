@@ -31,7 +31,7 @@ jobs:
 
     # - name: Restore dependencies
     #   run: |
-    #       find . -name "*.csproj" -regextype egrep -and -not -regex ".*(T|t)est.*|.*(S|s)imulat.*|.*node_modules.*|.*sample.*|.*code-generators.*|.*(A|a)utomat.*" -exec sh -c 'dotnet restore "$0"' {} \;
+    #       find . -name "*.csproj" -regextype egrep -and -not -regex ".*(T|t)est.*|.*(S|s)imulat.*|.*node_modules.*|.*sample.*|.*code-generators.*|.*(A|a)utomat.*" -exec sh -c 'dotnet restore "$0[...]
 
     - name: Install Snyk CLI
       run: |
@@ -55,48 +55,60 @@ jobs:
         chmod +x ./snyk-delta
         mv ./snyk-delta /usr/local/bin/
 
-    
     - name: Run Snyk Delta on Changed Files
       run: |
         set -e
-    
+
         # Fetch the previous commit hash
-        PREVIOUS_COMMIT=$(git rev-parse HEAD^1 || echo "")
+        PREVIOUS_COMMIT=$(git rev-parse HEAD^1 2>/dev/null)
         if [ -z "$PREVIOUS_COMMIT" ]; then
           echo "Error: Unable to fetch the previous commit. Falling back to initial commit."
           PREVIOUS_COMMIT=$(git rev-list --max-parents=0 HEAD)
         fi
+
+        if [ -z "$PREVIOUS_COMMIT" ]; then
+          echo "Error: Failed to determine a valid previous commit. Exiting."
+          exit 1
+        fi
+
         echo "Previous Commit: $PREVIOUS_COMMIT"
-    
+
         # Get the list of modified files
         git diff --name-only "$PREVIOUS_COMMIT" HEAD > changed_files.txt
         echo "Git Diff Output:"
         cat changed_files.txt || true
-    
+
         # Filter for relevant files (.csproj, .sln, .lock, .json)
         grep -E '\.(csproj|sln|lock|json)$' changed_files.txt > relevant_changed_files.txt || true
         echo "Filtered Relevant Files:"
         cat relevant_changed_files.txt || true
-    
+
         # Check if there are any relevant files
         if [ ! -s "relevant_changed_files.txt" ]; then
           echo "No relevant files found for Snyk Delta analysis. Nothing to scan."
           exit 0
         fi
-    
+
         # Process each relevant file with Snyk Delta
+        max_retries=3
         while IFS= read -r file; do
           echo "Scanning delta for: $file"
-          output=$(snyk delta --file="$file" --org=*** --base="$PREVIOUS_COMMIT" HEAD 2>&1)
-          exit_code=$?
-          echo "Snyk Delta Exit Code: $exit_code"
-          echo "Snyk Delta Output for $file:"
-          echo "$output"
-    
-          # Handle errors from Snyk Delta
+          retry_count=0
+          while [ $retry_count -lt $max_retries ]; do
+            output=$(snyk delta --file="$file" --org=${{secrets.SNYK_ORG_ID} --base="$PREVIOUS_COMMIT" HEAD 2>&1)
+            exit_code=$?
+
+            if [ $exit_code -eq 0 ]; then
+              break
+            fi
+
+            echo "Retrying Snyk Delta for $file (Attempt $((retry_count + 1)) of $max_retries)..."
+            retry_count=$((retry_count + 1))
+          done
+
           if [ $exit_code -ne 0 ]; then
-            echo "Error: Snyk Delta failed for $file with exit code $exit_code."
-            echo "Investigate the error output above for details."
+            echo "Error: Snyk Delta failed for $file after $max_retries attempts."
+            echo "Output: $output"
             exit $exit_code
           fi
         done < "relevant_changed_files.txt"
