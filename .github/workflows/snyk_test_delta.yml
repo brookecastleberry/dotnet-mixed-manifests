@@ -57,36 +57,54 @@ jobs:
 
     - name: Run Snyk Delta on Changed Files
       run: |
-        # Get the previous commit hash
+        # Fetch the previous commit hash
         PREVIOUS_COMMIT=$(git rev-parse HEAD^1)
-        echo "Previous Commit: $PREVIOUS_COMMIT"
-        echo "Exit Code: $?"
-    
-        # Get the list of modified files since the previous commit
-        git diff --name-only "$PREVIOUS_COMMIT" HEAD > changed_files.txt
-        echo "Exit Code: $?"
-    
-        # Filter for relevant files ...
-        grep -E '\.(csproj|sln|lock|json)$' changed_files.txt > relevant_changed_files.txt
-        echo "Exit Code: $?"
-    
-        if [ -s "relevant_changed_files.txt" ]; then
-          echo "Running Snyk Delta on the following changed files since commit $PREVIOUS_COMMIT:"
-          cat relevant_changed_files.txt
-          while IFS= read -r file; do
-            echo "Scanning delta for: $file"
-            output=$(snyk delta --file="$file" --org=*** --base="$PREVIOUS_COMMIT" HEAD)
-            echo "Snyk Delta Output for $file:"
-            echo "$output"
-            exit_code=$?
-            echo "Snyk Delta Exit Code: $exit_code"
-            if [ $exit_code -ne 0 ]; then
-              echo "Snyk Delta found issues or encountered an error for $file."
-            fi
-          done < "relevant_changed_files.txt"
-        else
-          echo "No relevant files changed in this push for Snyk Delta analysis."
+        if [ -z "$PREVIOUS_COMMIT" ]; then
+          echo "Error: Unable to fetch the previous commit. Exiting."
+          exit 1
         fi
+        echo "Previous Commit: $PREVIOUS_COMMIT"
+    
+        # Get the list of modified files
+        git diff --name-only "$PREVIOUS_COMMIT" HEAD > changed_files.txt
+        if [ $? -ne 0 ]; then
+          echo "Error: Failed to fetch the list of changed files. Exiting."
+          exit 1
+        fi
+        echo "Git Diff Output:"
+        cat changed_files.txt
+    
+        # Filter for relevant files (.csproj, .sln, .lock, .json)
+        grep -E '\.(csproj|sln|lock|json)$' changed_files.txt > relevant_changed_files.txt
+        if [ $? -ne 0 ]; then
+          echo "Error: Failed to filter relevant files. Exiting."
+          exit 1
+        fi
+        echo "Filtered Relevant Files:"
+        cat relevant_changed_files.txt
+    
+        # Check if there are any relevant files
+        if [ ! -s "relevant_changed_files.txt" ]; then
+          echo "No relevant files found for Snyk Delta analysis. Exiting."
+          exit 0
+        fi
+    
+        # Process each relevant file with Snyk Delta
+        while IFS= read -r file; do
+          echo "Scanning delta for: $file"
+          output=$(snyk delta --file="$file" --org=*** --base="$PREVIOUS_COMMIT" HEAD 2>&1)
+          exit_code=$?
+          echo "Snyk Delta Exit Code: $exit_code"
+          echo "Snyk Delta Output for $file:"
+          echo "$output"
+          
+          # Handle errors from Snyk Delta
+          if [ $exit_code -ne 0 ]; then
+            echo "Error: Snyk Delta failed for $file with exit code $exit_code."
+            echo "Investigate the error output above for details."
+            exit $exit_code
+          fi
+        done < "relevant_changed_files.txt"
 
 
           
