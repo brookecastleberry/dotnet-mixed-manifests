@@ -90,7 +90,7 @@ jobs:
           cat relevant_changed_files.txt
           while IFS= read -r file; do
             echo "Scanning delta for: $file"
-            snyk delta --org=${{ secrets.SNYK_ORG_ID }} $PREVIOUS_COMMIT HEAD "$file"
+            snyk delta --org=${{ secrets.SNYK_ORG_ID }} "$PREVIOUS_COMMIT...HEAD" "$file"
           done < "relevant_changed_files.txt"
         else
           echo "No relevant files changed in this push for Snyk Delta analysis."
