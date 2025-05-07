@@ -66,13 +66,17 @@ jobs:
       run: |
         # Get the previous commit hash
         PREVIOUS_COMMIT=$(git rev-parse HEAD^1)
-
+        echo "Previous Commit: $PREVIOUS_COMMIT"
+        echo "Exit Code: $?"
+    
         # Get the list of modified files since the previous commit
         git diff --name-only "$PREVIOUS_COMMIT" HEAD > changed_files.txt
-
-        # Filter for relevant files (e.g., project files, lock files)
-        grep -E '(\.csproj$|\.sln$|packages\.config$|pom\.xml$|build\.gradle$|requirements\.txt$|package-lock\.json$|yarn\.lock$|Gemfile$|Gemfile\.lock$|\.gemspec$|package-lock\.json$|pom\.xml$|\.jar$|\.war$|build\.gradle$|build\.gradle\.kts$|build\.sbt$|yarn\.lock$|pnpm-lock\.yaml$|package\.json$|Pipfile$|setup\.py$|requirements\.txt$|Gopkg\.lock$|go\.mod$|vendor\.json$|project\.assets\.json$|packages\.config$|project\.json$|paket\.dependencies$|composer\.lock$|Podfile\.lock$|CocoaPods\.podfile\.yaml$|CocoaPods\.podfile$|Podfile$|poetry\.lock$|mix\.exs$|Package\.swift$|pnpm-lock\.yaml$|yarn\.lock$|package-lock\.json$|package\.json$|Gemfile$|Gemfile\.lock$|pom\.xml$|build\.gradle$|build\.gradle\.kts$|build\.sbt$|Pipfile$|requirements\.txt$|Gopkg\.lock$|go\.mod$|vendor/vendor\.json$|obj/project\.assets\.json$|project\.assets\.json$|packages\.config$|paket\.dependencies$|composer\.lock$|Podfile$|Podfile\.lock$|poetry\.lock$|mix\.exs$|mix\.lock$|Package\.swift$)' changed_files.txt > relevant_changed_files.txt
-
+        echo "Exit Code: $?"
+    
+        # Filter for relevant files ...
+        grep -E '...' changed_files.txt > relevant_changed_files.txt
+        echo "Exit Code: $?"
+    
         if [ -s "relevant_changed_files.txt" ]; then
           echo "Running Snyk Delta on the following changed files since commit $PREVIOUS_COMMIT:"
           cat relevant_changed_files.txt
@@ -93,10 +97,4 @@ jobs:
 
 
           
-   #       while IFS= read -r file; do
-   #         echo "Scanning delta for: $file"
-   #         snyk delta --file="$file" --org=${{ secrets.SNYK_ORG_ID }} --base="$PREVIOUS_COMMIT" HEAD
-   #       done < "relevant_changed_files.txt"
-   #     else
-   #       echo "No relevant files changed in this push for Snyk Delta analysis."
-   #     fi
+
