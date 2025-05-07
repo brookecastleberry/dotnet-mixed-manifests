@@ -55,6 +55,7 @@ jobs:
         chmod +x ./snyk-delta
         mv ./snyk-delta /usr/local/bin/
 
+
     - name: Run Snyk Delta on Changed Files
       run: |
         set -e
