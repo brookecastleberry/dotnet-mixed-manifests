@@ -24,14 +24,14 @@ jobs:
     #   run: |
     #       dnf install -y libicu
 
-    # - name: Setup .NET
-    #   uses: actions/setup-dotnet@v3
-    #   with:
-    #       dotnet-version: '8.0.x'
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+          dotnet-version: '8.0.x'
 
-    # - name: Restore dependencies
-    #   run: |
-    #       find . -name "*.csproj" -regextype egrep -and -not -regex ".*(T|t)est.*|.*(S|s)imulat.*|.*node_modules.*|.*sample.*|.*code-generators.*|.*(A|a)utomat.*" -exec sh -c 'dotnet restore "$0[...]
+    - name: Restore dependencies
+      run: |
+          find . -name "*.csproj" -regextype egrep -and -not -regex ".*(T|t)est.*|.*(S|s)imulat.*|.*node_modules.*|.*sample.*|.*code-generators.*|.*(A|a)utomat.*" -exec sh -c 'dotnet restore "$0[...]
 
     - name: Install Snyk CLI
       run: |
