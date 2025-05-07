@@ -64,7 +64,6 @@ jobs:
 
     - name: Run Snyk Delta on Changed Files
       run: |
-
         # Get the previous commit hash
         PREVIOUS_COMMIT=$(git rev-parse HEAD^1)
 
@@ -79,8 +78,25 @@ jobs:
           cat relevant_changed_files.txt
           while IFS= read -r file; do
             echo "Scanning delta for: $file"
-            snyk delta --file="$file" --org=${{ secrets.SNYK_ORG_ID }} --base="$PREVIOUS_COMMIT" HEAD
+            output=$(snyk delta --file="$file" --org=*** --base="$PREVIOUS_COMMIT" HEAD)
+            echo "Snyk Delta Output for $file:"
+            echo "$output"
+            exit_code=$?
+            echo "Snyk Delta Exit Code: $exit_code"
+            if [ $exit_code -ne 0 ]; then
+              echo "Snyk Delta found issues or encountered an error for $file."
+            fi
           done < "relevant_changed_files.txt"
         else
           echo "No relevant files changed in this push for Snyk Delta analysis."
         fi
+
+
+          
+   #       while IFS= read -r file; do
+   #         echo "Scanning delta for: $file"
+   #         snyk delta --file="$file" --org=${{ secrets.SNYK_ORG_ID }} --base="$PREVIOUS_COMMIT" HEAD
+   #       done < "relevant_changed_files.txt"
+   #     else
+   #       echo "No relevant files changed in this push for Snyk Delta analysis."
+   #     fi
