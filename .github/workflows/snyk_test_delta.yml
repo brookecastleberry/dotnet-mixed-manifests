@@ -18,9 +18,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
-          repository: DigitalSystems/instrument-software
+          repository: dotnet-mixed-manifests
           ref: ${{ github.sha }} # Checkout the specific commit that triggered the push
-          token: ${{ SNYK_API_TOKEN }}
+          token: ${{ secrets.SNYK_API_TOKEN }}
           path: instrument-software
 
     - uses: actions/setup-node@v4
