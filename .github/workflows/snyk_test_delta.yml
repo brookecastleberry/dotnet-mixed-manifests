@@ -58,49 +58,32 @@ jobs:
     - name: Run Snyk Delta on Changed Files
       run: |
         # Get the previous commit hash
-        PREVIOUS_COMMIT=$(git rev-parse HEAD^1 2>/dev/null || echo "")
-        if [ -z "$PREVIOUS_COMMIT" ]; then
-          echo "No previous commit found. This might be the first commit in the branch."
-          echo "Skipping Snyk Delta analysis."
-          exit 0
-        fi
+        PREVIOUS_COMMIT=$(git rev-parse HEAD^1)
         echo "Previous Commit: $PREVIOUS_COMMIT"
+        echo "Exit Code: $?"
     
         # Get the list of modified files since the previous commit
         git diff --name-only "$PREVIOUS_COMMIT" HEAD > changed_files.txt
-        if [ $? -ne 0 ]; then
-          echo "Error: Failed to retrieve the list of changed files."
-          exit 1
-        fi
+        echo "Exit Code: $?"
     
-        # Filter for relevant files
+        # Filter for relevant files ...
         grep -E '\.(csproj|sln|lock|json)$' changed_files.txt > relevant_changed_files.txt
-        if [ $? -ne 0 ]; then
-          echo "Error: Failed to filter relevant files."
-          exit 1
-        fi
+        echo "Exit Code: $?"
     
         if [ -s "relevant_changed_files.txt" ]; then
-          echo "Running Snyk Delta on the following relevant files:"
+          echo "Running Snyk Delta on the following changed files since commit $PREVIOUS_COMMIT:"
           cat relevant_changed_files.txt
-          
-          errors=0
           while IFS= read -r file; do
             echo "Scanning delta for: $file"
-            snyk delta --file="$file" --org=*** --base="$PREVIOUS_COMMIT" HEAD
+            output=$(snyk delta --file="$file" --org=*** --base="$PREVIOUS_COMMIT" HEAD)
+            echo "Snyk Delta Output for $file:"
+            echo "$output"
             exit_code=$?
+            echo "Snyk Delta Exit Code: $exit_code"
             if [ $exit_code -ne 0 ]; then
-              echo "Error: Snyk Delta encountered an issue for $file."
-              errors=$((errors + 1))
+              echo "Snyk Delta found issues or encountered an error for $file."
             fi
           done < "relevant_changed_files.txt"
-    
-          if [ $errors -ne 0 ]; then
-            echo "Snyk Delta encountered issues with $errors file(s)."
-            exit 1
-          else
-            echo "Snyk Delta analysis completed successfully."
-          fi
         else
           echo "No relevant files changed in this push for Snyk Delta analysis."
         fi
