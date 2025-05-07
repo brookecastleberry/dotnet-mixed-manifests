@@ -87,7 +87,7 @@ jobs:
         if [ -s "relevant_changed_files.txt" ]; then
           while IFS= read -r file; do
             echo "Scanning $file with Snyk Delta..."
-            snyk delta --file="$file" --org=${{secrets.SNYK_ORG_ID}}
+            snyk-delta --file="$file" --org=${{secrets.SNYK_ORG_ID}}
             exit_code=$?
             if [ $exit_code -ne 0 ]; then
               echo "Snyk Delta found vulnerabilities or an error occurred for $file. Failing the workflow."
