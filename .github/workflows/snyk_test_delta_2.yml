@@ -45,7 +45,7 @@ jobs:
       - name: Filter relevant manifest files
         id: relevant_files
         run: |
-          grep -E '\.(csproj|sln|lock|json|gradle|pom\.xml|yarn\.lock|package-lock\.json|requirements\.txt|go\.mod|go\.sum)$' changed_files.txt > relevant_changed_files.txt
+          grep -E '\.(csproj|sln|lock|json)$' changed_files.txt > relevant_changed_files.txt
           if [ -s "relevant_changed_files.txt" ]; then
             echo "RELEVANT_FILES=$(cat relevant_changed_files.txt)" >> $GITHUB_OUTPUT
           else
