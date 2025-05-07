@@ -95,7 +95,7 @@ jobs:
           echo "Scanning delta for: $file"
           retry_count=0
           while [ $retry_count -lt $max_retries ]; do
-            output=$(snyk delta --file="$file" --org=${{secrets.SNYK_ORG_ID} --base="$PREVIOUS_COMMIT" HEAD 2>&1)
+            output=$(snyk delta --file="$file" --org=${{secrets.SNYK_ORG_ID}} --base="$PREVIOUS_COMMIT" HEAD 2>&1)
             exit_code=$?
 
             if [ $exit_code -eq 0 ]; then
