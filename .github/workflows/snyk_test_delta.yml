@@ -85,7 +85,8 @@ jobs:
         cat changed_files.txt || true
 
         # Filter for relevant files (.csproj, .sln, .lock, .json)
-        grep -E '\.(csproj|sln|lock|json)$' changed_files.txt > relevant_changed_files.txt || true
+        # Filter for relevant and valid files
+        grep -E '\.(csproj|sln|lock|json)$' changed_files.txt | grep -v 'invalid.csproj' > relevant_changed_files.txt || true
         echo "Filtered Relevant Files:"
         cat relevant_changed_files.txt || true
 
