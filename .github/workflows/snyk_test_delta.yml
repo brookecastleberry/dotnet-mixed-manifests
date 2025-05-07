@@ -11,8 +11,7 @@ on: workflow_dispatch
 jobs:
   snyk-sca:
     name: Snyk SCA Scan
-    runs-on: arc-enterprise-medium
-    container: oraclelinux:8
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
