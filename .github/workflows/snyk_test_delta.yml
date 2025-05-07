@@ -63,7 +63,6 @@ jobs:
 
     - name: Run Snyk Delta on Changed Files
       run: |
-        dnf install -y jq
 
         # Get the previous commit hash
         PREVIOUS_COMMIT=$(git rev-parse HEAD^1)
