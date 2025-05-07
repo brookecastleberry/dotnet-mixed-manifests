@@ -55,37 +55,32 @@ jobs:
         chmod +x ./snyk-delta
         mv ./snyk-delta /usr/local/bin/
 
+    
     - name: Run Snyk Delta on Changed Files
       run: |
+        set -e
+    
         # Fetch the previous commit hash
-        PREVIOUS_COMMIT=$(git rev-parse HEAD^1)
+        PREVIOUS_COMMIT=$(git rev-parse HEAD^1 || echo "")
         if [ -z "$PREVIOUS_COMMIT" ]; then
-          echo "Error: Unable to fetch the previous commit. Exiting."
-          exit 1
+          echo "Error: Unable to fetch the previous commit. Falling back to initial commit."
+          PREVIOUS_COMMIT=$(git rev-list --max-parents=0 HEAD)
         fi
         echo "Previous Commit: $PREVIOUS_COMMIT"
     
         # Get the list of modified files
         git diff --name-only "$PREVIOUS_COMMIT" HEAD > changed_files.txt
-        if [ $? -ne 0 ]; then
-          echo "Error: Failed to fetch the list of changed files. Exiting."
-          exit 1
-        fi
         echo "Git Diff Output:"
-        cat changed_files.txt
+        cat changed_files.txt || true
     
         # Filter for relevant files (.csproj, .sln, .lock, .json)
-        grep -E '\.(csproj|sln|lock|json)$' changed_files.txt > relevant_changed_files.txt
-        if [ $? -ne 0 ]; then
-          echo "Error: Failed to filter relevant files. Exiting."
-          exit 1
-        fi
+        grep -E '\.(csproj|sln|lock|json)$' changed_files.txt > relevant_changed_files.txt || true
         echo "Filtered Relevant Files:"
-        cat relevant_changed_files.txt
+        cat relevant_changed_files.txt || true
     
         # Check if there are any relevant files
         if [ ! -s "relevant_changed_files.txt" ]; then
-          echo "No relevant files found for Snyk Delta analysis. Exiting."
+          echo "No relevant files found for Snyk Delta analysis. Nothing to scan."
           exit 0
         fi
     
@@ -97,7 +92,7 @@ jobs:
           echo "Snyk Delta Exit Code: $exit_code"
           echo "Snyk Delta Output for $file:"
           echo "$output"
-          
+    
           # Handle errors from Snyk Delta
           if [ $exit_code -ne 0 ]; then
             echo "Error: Snyk Delta failed for $file with exit code $exit_code."
