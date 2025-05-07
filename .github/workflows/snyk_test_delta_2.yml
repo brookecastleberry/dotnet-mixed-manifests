@@ -22,10 +22,10 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Set up .NET (if needed)
-      uses: actions/setup-dotnet@v3
-      with:
-         dotnet-version: '8.0.x'
+   # - name: Set up .NET (if needed)
+   #   uses: actions/setup-dotnet@v3
+   #   with:
+   #      dotnet-version: '8.0.x'
 
     # - name: Restore dependencies (if needed)
     #   run: |
