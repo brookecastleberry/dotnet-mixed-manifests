@@ -15,7 +15,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
-          repository: dotnet-mixed-manifests
+          repository: brookecastleberry/dotnet-mixed-manifests
           ref: ${{ github.sha }} # Checkout the specific commit that triggered the push
           token: ${{ secrets.SNYK_API_TOKEN }}
           #path: instrument-software
