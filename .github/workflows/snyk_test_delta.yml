@@ -84,17 +84,55 @@ jobs:
         echo "Filtered Relevant Files:"
         cat relevant_changed_files.txt || true
 
-        # Check if there are any relevant files
+
+        # Run Snyk Test on relevant files
         if [ -s "relevant_changed_files.txt" ]; then
-          echo "Running Snyk Delta on the following changed files since commit $PREVIOUS_COMMIT:"
-          cat relevant_changed_files.txt
+          echo "Running Snyk Test on relevant files:"
           while IFS= read -r file; do
-            echo "Scanning delta for: $file"
-            snyk delta --org=${{ secrets.SNYK_ORG_ID }} 
+            echo "Testing: $file"
+            snyk test --org=${{ secrets.SNYK_ORG_ID }} "$file"
           done < "relevant_changed_files.txt"
         else
-          echo "No relevant files changed in this push for Snyk Delta analysis."
+          echo "No relevant files found to test with Snyk."
         fi
+
+        # Basic Snyk Delta Test on Relevant Files
+        if [ -s "relevant_changed_files.txt" ]; then
+          echo "Running basic Snyk Delta test on relevant files:"
+          while IFS= read -r file; do
+            echo "Scanning delta for: $file"
+            snyk delta --org=${{ secrets.SNYK_ORG_ID }} --base="$PREVIOUS_COMMIT" --target=HEAD "$file"
+          done < "relevant_changed_files.txt"
+        else
+          echo "No relevant files to run basic Snyk Delta test against."
+        fi
+      env:
+        SNYK_ORG_ID: ${{ secrets.SNYK_ORG_ID }}
+
+        
+
+
+
+
+
+
+
+
+
+
+        
+
+        # Check if there are any relevant files
+#        if [ -s "relevant_changed_files.txt" ]; then
+ #         echo "Running Snyk Delta on the following changed files since commit $PREVIOUS_COMMIT:"
+  #        cat relevant_changed_files.txt
+   #       while IFS= read -r file; do
+    #        echo "Scanning delta for: $file"
+     #       snyk delta --org=${{ secrets.SNYK_ORG_ID }} 
+      #    done < "relevant_changed_files.txt"
+       # else
+        #  echo "No relevant files changed in this push for Snyk Delta analysis."
+        #fi
 
 
 
