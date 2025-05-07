@@ -23,18 +23,18 @@ jobs:
       with:
           node-version: '20'
 
-    - name: Install libicu dependency
-      run: |
-        dnf install -y libicu
+   # - name: Install libicu dependency
+    #  run: |
+     #   dnf install -y libicu
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: '8.0.x'
+  #  - name: Setup .NET
+  #    uses: actions/setup-dotnet@v3
+  #    with:
+  #      dotnet-version: '8.0.x'
 
-    - name: Restore dependencies
-      run: |
-          find . -name "*.csproj" -regextype egrep -and -not -regex ".*(T|t)est.*|.*(S|s)imulat.*|.*node_modules.*|.*sample.*|.*code-generators.*|.*(A|a)utomat.*" -exec sh -c 'dotnet restore "$0" --use-lock-file' {} \;
+  #  - name: Restore dependencies
+  #    run: |
+  #        find . -name "*.csproj" -regextype egrep -and -not -regex ".*(T|t)est.*|.*(S|s)imulat.*|.*node_modules.*|.*sample.*|.*code-generators.*|.*(A|a)utomat.*" -exec sh -c 'dotnet restore "$0" --use-lock-file' {} \;
 
     - name: Install Snyk CLI
       run: |
