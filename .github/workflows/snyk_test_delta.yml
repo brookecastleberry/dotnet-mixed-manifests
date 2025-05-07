@@ -74,7 +74,7 @@ jobs:
         echo "Exit Code: $?"
     
         # Filter for relevant files ...
-        grep -E '...' changed_files.txt > relevant_changed_files.txt
+        grep -E '\.(csproj|sln|lock|json|yml)$' changed_files.txt > relevant_changed_files.txt
         echo "Exit Code: $?"
     
         if [ -s "relevant_changed_files.txt" ]; then
