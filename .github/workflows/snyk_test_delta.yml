@@ -89,13 +89,23 @@ jobs:
           cat relevant_changed_files.txt
           while IFS= read -r file; do
             echo "Scanning delta for: $file"
-            snyk delta --org=${{ secrets.SNYK_ORG_ID }} --base="$PREVIOUS_COMMIT" HEAD
+            snyk-delta --org=${{ secrets.SNYK_ORG_ID }} 
           done < "relevant_changed_files.txt"
         else
           echo "No relevant files changed in this push for Snyk Delta analysis."
         fi
 
 
+
+#first option
+#run snyk delta for each relevant file and compare base org to this org 
+
+
+
+#second option
+#Run Snyk Test for relevant files on base org
+#run Snyk Test for relevant files on new org
+#run Snyk Delta for new vulnerabilites found 
 
 
 
