@@ -1,70 +1,77 @@
-name: Snyk Delta on Commit Changes
+name: Snyk Scan Delta on Changed Files
 
 on: workflow_dispatch
-# on:
-#   push:
-#     branches:
-#       - main # Or your main branch
+ # Or your default branch
 
 jobs:
-  snyk_delta_check:
-    name: Snyk Delta Analysis
+  snyk-delta-scan:
+    name: Snyk Delta Scan on Changed Manifests
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 2 # Needed to compare with the previous commit
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2 # Needed to compare with the previous commit
 
-    - name: Set up Node.js (if needed)
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-   # - name: Set up .NET (if needed)
-   #   uses: actions/setup-dotnet@v3
-   #   with:
-   #      dotnet-version: '8.0.x'
+      - name: Install Snyk CLI
+        run: |
+          curl -Lo ./snyk https://static.snyk.io/cli/latest/snyk-linux
+          chmod +x ./snyk
+          sudo mv ./snyk /usr/local/bin/
 
-    # - name: Restore dependencies (if needed)
-    #   run: |
-    #     # Your dependency restoration commands
+      - name: Install snyk-delta
+        run: |
+          curl -Lo ./snyk-delta https://github.com/snyk-labs/snyk-delta/releases/latest/download/snyk-delta-linux
+          chmod +x ./snyk-delta
+          sudo mv ./snyk-delta /usr/local/bin/
 
-    - name: Install Snyk CLI
-      run: |
-        curl -Lo ./snyk https://static.snyk.io/cli/latest/snyk-linux
-        chmod +x ./snyk
-        sudo mv ./snyk /usr/local/bin/
+      - name: SNYK auth
+        run: snyk auth ${{ secrets.SNYK_API_TOKEN }}
 
-    - name: Snyk Auth
-      run: snyk auth ${{ secrets.SNYK_API_TOKEN }}
+      - name: Get changed manifest files
+        id: changed_files
+        run: |
+          PREVIOUS_COMMIT=$(git rev-parse HEAD^1) || PREVIOUS_COMMIT=$(git rev-list --max-parents=0 HEAD)
+          echo "PREVIOUS_COMMIT=$PREVIOUS_COMMIT" >> $GITHUB_ENV
+          git diff --name-only $PREVIOUS_COMMIT HEAD > changed_files.txt
+          cat changed_files.txt
 
-    - name: Install Snyk test
-        curl -Lo ./snyk https://static.snyk.io/cli/latest/snyk-linux
-        chmod +x ./snyk
-        sudo mv ./snyk /usr/local/bin/
+      - name: Filter relevant manifest files
+        id: relevant_files
+        run: |
+          grep -E '\.(csproj|sln|lock|json|gradle|pom\.xml|yarn\.lock|package-lock\.json|requirements\.txt|go\.mod|go\.sum)$' changed_files.txt > relevant_changed_files.txt
+          if [ -s "relevant_changed_files.txt" ]; then
+            echo "RELEVANT_FILES=$(cat relevant_changed_files.txt)" >> $GITHUB_OUTPUT
+          else
+            echo "No relevant manifest files changed."
+            echo "RELEVANT_FILES=" >> $GITHUB_OUTPUT
+          fi
+          cat relevant_changed_files.txt || true
 
-    - name: Run Snyk Test on Previous Commit
-      id: snyk_base
-      run: |
-        git checkout HEAD^1
-        snyk test --json --print-deps > snyk_base.json
-        git checkout HEAD # Switch back to the current commit
-      continue-on-error: true # Allow if no previous commit
+      - name: Run Snyk Test on changed manifest files
+        if: steps.relevant_files.outputs.RELEVANT_FILES != ''
+        run: |
+          set -e
+          IFS=$'\n' read -r -d '' FILES <<< "${{ steps.relevant_files.outputs.RELEVANT_FILES }}"
+          for file in "$FILES"; do
+            echo "Running Snyk Test for: $file"
+            snyk test --file="$file" --org="${{ secrets.SNYK_ORG_ID }}"
+            echo "---"
+          done
 
-    - name: Run Snyk Test on Current Commit
-      id: snyk_head
-      run: snyk test --json --print-deps > snyk_head.json
-
-    - name: Install snyk-delta
-      run: npm install -g snyk-delta
-
-    - name: Run Snyk Delta
-      run: |
-        export SNYK_TOKEN="${{ secrets.SNYK_API_TOKEN }}"
-        if [ -f "snyk_base.json" ]; then
-          npx snyk-delta --baselineFile snyk_base.json --currentFile snyk_head.json --fail-on=upgradable
-        else
-          echo "No previous commit found or Snyk test on previous commit failed. Skipping delta analysis."
-        fi
+      - name: Run Snyk Delta on changed manifest files
+        if: steps.relevant_files.outputs.RELEVANT_FILES != ''
+        run: |
+          set -e
+          IFS=$'\n' read -r -d '' FILES <<< "${{ steps.relevant_files.outputs.RELEVANT_FILES }}"
+          for file in "$FILES"; do
+            echo "Running Snyk Delta for: $file"
+            snyk-delta --file="$file" --org="${{ secrets.SNYK_ORG_ID }}" --base="$PREVIOUS_COMMIT" HEAD
+            echo "---"
+          done
