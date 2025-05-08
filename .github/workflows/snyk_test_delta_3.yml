@@ -72,7 +72,7 @@ jobs:
         set -e
         CHANGED_FILES=$(echo "${{ steps.get_changed_files.outputs.changed_files }}")
         TARGET_REPO="${{ github.repository }}"
-        SNYK_ORG_ID="x" #replace with your org id
+        SNYK_ORG_ID="d2de0789-91e1-4846-80a4-a1876754c378"
         
 
         # Function to fetch Snyk projects for the target organization
@@ -95,7 +95,6 @@ jobs:
         while IFS= read -r file; do
           echo "Processing file: $file"
           FILE_PATH="$file"
-          FILE_NAME=$(basename "$FILE_PATH")
           TARGET_PROJECT_ID=""
           
 
