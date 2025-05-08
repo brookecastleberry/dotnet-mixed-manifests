@@ -97,7 +97,7 @@ jobs:
             # Run snyk delta (note: this still expects snyk test output)
             echo "Running snyk delta..."
             snyk test --file="$file" --json --org="${{ secrets.SNYK_ORG_ID }}" --project-name="$PROJECT_NAME" | \
-            snyk delta --baselineOrg="${{ secrets.SNYK_ORG_ID }}" --baselineProject="$BASELINE_PROJECT_ID" --currentOrg="${{ secrets.SNYK_ORG_ID }}" --currentProject="$CURRENT_PROJECT_ID"
+            snyk-delta --baselineOrg="${{ secrets.SNYK_ORG_ID }}" --baselineProject="$BASELINE_PROJECT_ID" --currentOrg="${{ secrets.SNYK_ORG_ID }}" --currentProject="$CURRENT_PROJECT_ID"
             echo "-------------------------"
           done <<< "$CHANGED_FILES"
         else
