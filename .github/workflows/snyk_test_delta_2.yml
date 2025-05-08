@@ -79,22 +79,27 @@ jobs:
         echo "Snyk Baseline Organization ID: $SNYK_BASELINE_ORG_ID"
         echo "Changed Files: $CHANGED_FILES"
 
-        # Function to fetch Snyk projects for a given organization ID
-        fetch_snyk_projects() {
-          ORG_ID="$1"
-          echo "Fetching all Snyk projects for org: $ORG_ID"
-          curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$ORG_ID/projects?version=2024-10-15"
+        # Function to fetch Snyk projects for the target organization
+        fetch_target_snyk_projects() {
+          echo "Fetching all Snyk projects for target org: $SNYK_ORG_ID"
+          curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$SNYK_ORG_ID/projects?version=2024-10-15"
+        }
+
+        # Function to fetch Snyk projects for the baseline organization
+        fetch_baseline_snyk_projects() {
+          echo "Fetching all Snyk projects for baseline org: $SNYK_BASELINE_ORG_ID"
+          curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$SNYK_BASELINE_ORG_ID/projects?version=2024-10-15"
         }
 
         # Fetch all projects for the target organization
-        TARGET_PROJECTS_JSON=$(fetch_snyk_projects "$SNYK_ORG_ID")
+        TARGET_PROJECTS_JSON=$(fetch_target_snyk_projects)
         if [ -z "$TARGET_PROJECTS_JSON" ]; then
           echo "Error: Could not fetch Snyk projects for target organization: $SNYK_ORG_ID"
           exit 1
         fi
 
         # Fetch all projects for the baseline organization
-        BASELINE_PROJECTS_JSON=$(fetch_snyk_projects "$SNYK_BASELINE_ORG_ID")
+        BASELINE_PROJECTS_JSON=$(fetch_baseline_snyk_projects)
         if [ -z "$BASELINE_PROJECTS_JSON" ]; then
           echo "Error: Could not fetch Snyk projects for baseline organization: $SNYK_BASELINE_ORG_ID"
           exit 1
