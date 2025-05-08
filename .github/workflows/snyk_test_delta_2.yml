@@ -82,13 +82,13 @@ jobs:
         # Function to fetch Snyk projects for the target organization
         fetch_target_snyk_projects() {
           echo "Fetching all Snyk projects for target org: $SNYK_ORG_ID"
-          curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$SNYK_ORG_ID/projects?version=2024-10-15"
+          curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/d2de0789-91e1-4846-80a4-a1876754c378/projects?version=2024-10-15"
         }
 
         # Function to fetch Snyk projects for the baseline organization
         fetch_baseline_snyk_projects() {
           echo "Fetching all Snyk projects for baseline org: $SNYK_BASELINE_ORG_ID"
-          curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$SNYK_BASELINE_ORG_ID/projects?version=2024-10-15"
+          curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/d2de0789-91e1-4846-80a4-a1876754c378/projects?version=2024-10-15"
         }
 
         # Fetch all projects for the target organization
@@ -122,7 +122,7 @@ jobs:
             echo "Found Target Project ID: $TARGET_PROJECT_ID for file: $FILE_PATH"
             echo "Found Baseline Project ID: $BASELINE_PROJECT_ID for file: $FILE_PATH"
             echo "Running snyk delta between project ID '$BASELINE_PROJECT_ID' (org: $SNYK_BASELINE_ORG_ID) and '$TARGET_PROJECT_ID' (org: $SNYK_ORG_ID)"
-            snyk-delta --baselineOrg="$SNYK_BASELINE_ORG_ID" --baselineProject="$BASELINE_PROJECT_ID" --currentOrg="$SNYK_ORG_ID" --currentProject="$TARGET_PROJECT_ID"
+            snyk-delta --baselineOrg="d2de0789-91e1-4846-80a4-a1876754c378" --baselineProject="$BASELINE_PROJECT_ID" --currentOrg="d2de0789-91e1-4846-80a4-a1876754c378" --currentProject="$TARGET_PROJECT_ID"
             echo "-------------------------"
           else
 
@@ -135,16 +135,16 @@ jobs:
 
     - name: Debug - Print Snyk Projects Response (Target)
       run: |
-        ORG_ID="$SNYK_ORG_ID"
+        SNYK_ORG_ID="$SNYK_ORG_ID"
         echo "Fetching Snyk projects for org: $ORG_ID"
-        TARGET_PROJECTS_RAW=$(curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$ORG_ID/projects?limit=1000")
+        TARGET_PROJECTS_RAW=$(curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$SNYK_ORG_ID/projects?version=2024-10-15")
         echo "Target Projects JSON:"
         echo "$TARGET_PROJECTS_RAW"
 
     - name: Debug - Print Snyk Projects Response (Baseline)
       run: |
         ORG_ID="$SNYK_BASELINE_ORG_ID"
-        echo "Fetching Snyk projects for org: $ORG_ID"
-        BASELINE_PROJECTS_RAW=$(curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$ORG_ID/projects?limit=1000")
+        echo "Fetching Snyk projects for org: $SNYK_BASELINE_ORG_ID"
+        BASELINE_PROJECTS_RAW=$(curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$SNYK_BASELINE_ORG_ID/projects?version=2024-10-15")
         echo "Baseline Projects JSON:"
         echo "$BASELINE_PROJECTS_RAW"
