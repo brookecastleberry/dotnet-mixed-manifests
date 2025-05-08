@@ -71,38 +71,44 @@ jobs:
       run: |
         set -e
         CHANGED_FILES=$(echo "${{ steps.get_changed_files.outputs.changed_files }}")
+        TARGET_REPO="${{ github.repository }}"
+        SNYK_ORG_ID="${{ secrets.SNYK_ORG_ID }}"
+        BASELINE_PROJECT_ID="f9b13c77-b5d6-4ab4-83e7-9b93bd9bf283" # Replace with the actual Snyk Project ID of your baseline
 
-        if [ -n "$CHANGED_FILES" ]; then
-          echo "Running Snyk Delta for each changed file:"
+        echo "Snyk Organization ID: $SNYK_ORG_ID"
+        echo "Baseline Snyk Project ID (Configured): $BASELINE_PROJECT_ID"
+
+        # Fetch all projects in the Snyk organization
+        echo "Fetching all Snyk projects for org: $SNYK_ORG_ID"
+        ALL_PROJECTS_JSON=$(curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$SNYK_ORG_ID/projects?limit=1000") # Adjust limit if needed
+
+        if [ -n "$ALL_PROJECTS_JSON" ]; then
+          echo "Processing changed files..."
           while IFS= read -r file; do
             echo "Processing file: $file"
-            PROJECT_NAME="$file"
+            FILE_PATH="$file"
+            TARGET_PROJECT_ID="" # Initialize
 
-            # Get Current Project ID
-            echo "Fetching Snyk Project ID for current: $PROJECT_NAME"
-            CURRENT_PROJECT_ID=$(curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/${{ secrets.SNYK_ORG_ID }}/projects?names=$PROJECT_NAME" | jq -r '.data[0].id' || true)
-            if [ -z "$CURRENT_PROJECT_ID" ]; then
-              echo "Warning: Could not find Snyk project with name: $PROJECT_NAME. Skipping delta for this file."
+            # Find the Snyk project ID for the current repository
+            POTENTIAL_PROJECT_ID=$(echo "$ALL_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target.name == \"$TARGET_REPO\") | .id" || true)
+
+            if [ -n "$POTENTIAL_PROJECT_ID" ]; then
+              TARGET_PROJECT_ID="$POTENTIAL_PROJECT_ID"
+              echo "Found Target Snyk Project ID for repository '$TARGET_REPO': $TARGET_PROJECT_ID"
+            else
+              echo "Warning: Could not find a Snyk project for repository: $TARGET_REPO. Skipping delta for file: $FILE_PATH"
               continue
             fi
-            echo "Current Snyk Project ID: $CURRENT_PROJECT_ID"
 
-            # Assuming a consistent baseline project for all comparisons
-            BASELINE_PROJECT_NAME="your-baseline-project-name" # Replace with your actual baseline project name
-            echo "Fetching Snyk Baseline Project ID for: $BASELINE_PROJECT_NAME"
-            BASELINE_PROJECT_ID=$(curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/${{ secrets.SNYK_ORG_ID }}/projects?names=$BASELINE_PROJECT_NAME" | jq -r '.data[0].id' || true)
-            if [ -z "$BASELINE_PROJECT_ID" ]; then
-              echo "Error: Could not find Snyk baseline project with name: $BASELINE_PROJECT_NAME. Exiting."
-              exit 1
+            if [ -n "$TARGET_PROJECT_ID" ] && [ -n "$BASELINE_PROJECT_ID" ]; then
+              echo "Running snyk delta between project ID '$BASELINE_PROJECT_ID' and '$TARGET_PROJECT_ID'"
+              snyk-delta --baselineOrg="$SNYK_ORG_ID" --baselineProject="$BASELINE_PROJECT_ID" --currentOrg="$SNYK_ORG_ID" --currentProject="$TARGET_PROJECT_ID"
+              echo "-------------------------"
+            else
+              echo "Warning: Could not determine target or baseline Snyk Project ID for file: $FILE_PATH"
             fi
-            echo "Baseline Snyk Project ID: $BASELINE_PROJECT_ID"
-
-            # Run snyk delta (note: this still expects snyk test output)
-            echo "Running snyk delta..."
-            snyk test --file="$file" --json --org="${{ secrets.SNYK_ORG_ID }}" --project-name="$PROJECT_NAME" | \
-            snyk-delta --baselineOrg="${{ secrets.SNYK_ORG_ID }}" --baselineProject="$BASELINE_PROJECT_ID" --currentOrg="${{ secrets.SNYK_ORG_ID }}" --currentProject="$CURRENT_PROJECT_ID"
-            echo "-------------------------"
           done <<< "$CHANGED_FILES"
         else
-          echo "No relevant files to process."
+          echo "Error: Could not fetch Snyk projects."
+          exit 1
         fi
