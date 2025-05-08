@@ -95,6 +95,7 @@ jobs:
         while IFS= read -r file; do
           echo "Processing file: $file"
           FILE_PATH="$file"
+          FILE_NAME=$(basename "$FILE_PATH")
           TARGET_PROJECT_ID=""
           
 
