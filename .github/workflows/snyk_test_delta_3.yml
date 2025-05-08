@@ -11,7 +11,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
-        ref: master  # Checkout the specific commit that triggered the push
+        ref: ${{ github.sha }}   # Checkout the specific commit that triggered the push
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - uses: actions/setup-node@v4
