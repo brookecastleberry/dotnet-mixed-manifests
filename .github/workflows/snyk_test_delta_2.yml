@@ -45,7 +45,7 @@ jobs:
         snyk auth ${{secrets.SNYK_API_TOKEN}}
 
     - name: Install snyk-delta
-      run: ubuntu-latest
+      run: |
         curl -Lo snyk-delta https://github.com/snyk-labs/snyk-delta/releases/latest/download/snyk-delta-linux
         chmod +x snyk-delta
         sudo mv snyk-delta /usr/local/bin/
