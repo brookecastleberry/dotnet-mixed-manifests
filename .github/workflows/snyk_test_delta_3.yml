@@ -1,4 +1,4 @@
-name: Snyk Scan with Curl
+name: Snyk Delta Scan 
 
 on: workflow_dispatch
 
@@ -111,6 +111,7 @@ jobs:
           else
             echo "Warning: Could not find matching Snyk projects in both target and baseline organizations for file: $FILE_PATH (searched by target_file). Skipping delta."
           fi
+        done <<< "$CHANGED_FILES"
         done <<< "$CHANGED_FILES"
     
     
