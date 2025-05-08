@@ -1,77 +1,105 @@
-name: Snyk Scan Delta on Changed Files
+name: Snyk Scan
 
 on: workflow_dispatch
- # Or your default branch
 
 jobs:
-  snyk-delta-scan:
-    name: Snyk Delta Scan on Changed Manifests
+  snyk-sca:
+    name: Snyk SCA Scan
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 2 # Needed to compare with the previous commit
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Fetch full history instead of a single commit
+        ref: ${{ github.sha }}  # Checkout the specific commit that triggered the push
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
-      - name: Install Snyk CLI
-        run: |
-          curl -Lo ./snyk https://static.snyk.io/cli/latest/snyk-linux
-          chmod +x ./snyk
-          sudo mv ./snyk /usr/local/bin/
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
 
-      - name: Install snyk-delta
-        run: |
-          curl -Lo ./snyk-delta https://github.com/snyk-labs/snyk-delta/releases/latest/download/snyk-delta-linux
-          chmod +x ./snyk-delta
-          sudo mv ./snyk-delta /usr/local/bin/
+    - name: Restore dependencies
+      run: |
+        find . -name "*.csproj" -exec dotnet restore {} \;
 
-      - name: SNYK auth
-        run: snyk auth ${{ secrets.SNYK_API_TOKEN }}
+    - name: Install Snyk CLI
+      run: |
+        curl -Lo ./snyk https://static.snyk.io/cli/latest/snyk-linux
+        chmod +x ./snyk
+        mv ./snyk /usr/local/bin/
 
-      - name: Get changed manifest files
-        id: changed_files
-        run: |
-          PREVIOUS_COMMIT=$(git rev-parse HEAD^1) || PREVIOUS_COMMIT=$(git rev-list --max-parents=0 HEAD)
-          echo "PREVIOUS_COMMIT=$PREVIOUS_COMMIT" >> $GITHUB_ENV
-          git diff --name-only $PREVIOUS_COMMIT HEAD > changed_files.txt
-          cat changed_files.txt
+    - name: Install snyk-to-html
+      run: |
+        curl -Lo ./snyk-to-html https://github.com/snyk/snyk-to-html/releases/latest/download/snyk-to-html-linux
+        chmod +x ./snyk-to-html
+        mv ./snyk-to-html /usr/local/bin/
 
-      - name: Filter relevant manifest files
-        id: relevant_files
-        run: |
-          grep -E '\.(csproj|sln|lock|json)$' changed_files.txt > relevant_changed_files.txt
-          if [ -s "relevant_changed_files.txt" ]; then
-            echo "RELEVANT_FILES=$(cat relevant_changed_files.txt)" >> $GITHUB_OUTPUT
-          else
-            echo "No relevant manifest files changed."
-            echo "RELEVANT_FILES=" >> $GITHUB_OUTPUT
-          fi
-          cat relevant_changed_files.txt || true
+    - name: SNYK auth
+      run: |
+        snyk auth ${{secrets.SNYK_API_TOKEN}}
 
-      - name: Run Snyk Test on changed manifest files
-        if: steps.relevant_files.outputs.RELEVANT_FILES != ''
-        run: |
-          set -e
-          IFS=$'\n' read -r -d '' FILES <<< "${{ steps.relevant_files.outputs.RELEVANT_FILES }}"
-          for file in "$FILES"; do
-            echo "Running Snyk Test for: $file"
-            snyk test --file="$file" --org="${{ secrets.SNYK_ORG_ID }}"
-            echo "---"
-          done
+    - name: Install snyk-delta
+      run: |
+        curl -Lo ./snyk-delta https://github.com/snyk-labs/snyk-delta/releases/latest/download/snyk-delta-linux
+        chmod +x ./snyk-delta
+        mv ./snyk-delta /usr/local/bin/
 
-      - name: Run Snyk Delta on changed manifest files
-        if: steps.relevant_files.outputs.RELEVANT_FILES != ''
-        run: |
-          set -e
-          IFS=$'\n' read -r -d '' FILES <<< "${{ steps.relevant_files.outputs.RELEVANT_FILES }}"
-          for file in "$FILES"; do
-            echo "Running Snyk Delta for: $file"
-            snyk-delta --file="$file" --org="${{ secrets.SNYK_ORG_ID }}" --base="$PREVIOUS_COMMIT" HEAD
-            echo "---"
-          done
+    - name: Get Changed Files
+      id: get_changed_files
+      run: |
+        # Get the list of modified files
+        git diff --name-only HEAD^1 HEAD > changed_files.txt || true
+
+        # Filter for relevant files (.csproj, .sln, .lock, .json)
+        grep -E '\.(csproj|sln|lock|json)$' changed_files.txt | grep -v 'invalid.csproj' > relevant_changed_files.txt || true
+
+        echo "Filtered Relevant Files:"
+        cat relevant_changed_files.txt || true
+
+        echo "changed_files=$(cat relevant_changed_files.txt)" >> "$GITHUB_OUTPUT"
+
+    - name: Run Snyk Delta on Changed Files
+      run: |
+        set -e
+        CHANGED_FILES=$(echo "${{ steps.get_changed_files.outputs.changed_files }}")
+
+        if [ -n "$CHANGED_FILES" ]; then
+          echo "Running Snyk Delta for each changed file:"
+          while IFS= read -r file; do
+            echo "Processing file: $file"
+            PROJECT_NAME="repo/$file"
+
+            # Get Current Project ID
+            echo "Fetching Snyk Project ID for current: $PROJECT_NAME"
+            CURRENT_PROJECT_ID=$(curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/${{ secrets.SNYK_ORG_ID }}/projects?names=$PROJECT_NAME" | jq -r '.data[0].id' || true)
+            if [ -z "$CURRENT_PROJECT_ID" ]; then
+              echo "Warning: Could not find Snyk project with name: $PROJECT_NAME. Skipping delta for this file."
+              continue
+            fi
+            echo "Current Snyk Project ID: $CURRENT_PROJECT_ID"
+
+            # Assuming a consistent baseline project for all comparisons
+            BASELINE_PROJECT_NAME="your-baseline-project-name" # Replace with your actual baseline project name
+            echo "Fetching Snyk Baseline Project ID for: $BASELINE_PROJECT_NAME"
+            BASELINE_PROJECT_ID=$(curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/${{ secrets.SNYK_ORG_ID }}/projects?names=$BASELINE_PROJECT_NAME" | jq -r '.data[0].id' || true)
+            if [ -z "$BASELINE_PROJECT_ID" ]; then
+              echo "Error: Could not find Snyk baseline project with name: $BASELINE_PROJECT_NAME. Exiting."
+              exit 1
+            fi
+            echo "Baseline Snyk Project ID: $BASELINE_PROJECT_ID"
+
+            # Run snyk delta (note: this still expects snyk test output)
+            echo "Running snyk delta..."
+            snyk test --file="$file" --json --org="${{ secrets.SNYK_ORG_ID }}" --project-name="$PROJECT_NAME" | \
+            snyk delta --baselineOrg="${{ secrets.SNYK_ORG_ID }}" --baselineProject="$BASELINE_PROJECT_ID" --currentOrg="${{ secrets.SNYK_ORG_ID }}" --currentProject="$CURRENT_PROJECT_ID"
+            echo "-------------------------"
+          done <<< "$CHANGED_FILES"
+        else
+          echo "No relevant files to process."
+        fi
