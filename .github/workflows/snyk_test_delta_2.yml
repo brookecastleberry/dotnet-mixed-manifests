@@ -83,7 +83,7 @@ jobs:
         fetch_snyk_projects() {
           ORG_ID="$1"
           echo "Fetching all Snyk projects for org: $ORG_ID"
-          curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$ORG_ID/projects?limit=1000"
+          curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$ORG_ID/projects?version=2024-10-15"
         }
 
         # Fetch all projects for the target organization
