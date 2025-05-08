@@ -113,10 +113,10 @@ jobs:
           BASELINE_PROJECT_ID=""
 
           # Try to find a matching project in the target organization based on the manifest file name or repository name
-          TARGET_PROJECT_ID=$(echo "$TARGET_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.name | split(\":\") | last == \"$FILE_NAME\" or .attributes.name | split(\"(\") | first == \"$TARGET_REPO\") | .id" || true)
+          TARGET_PROJECT_ID=$(echo "$TARGET_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target_file == \"$FILE_PATH\" or .attributes.name | split(\"(\") | first == \"$TARGET_REPO\") | .id" || true)
 
           # Try to find a matching project in the baseline organization based on the manifest file name or repository name
-          BASELINE_PROJECT_ID=$(echo "$BASELINE_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.name | split(\":\") | last == \"$FILE_NAME\" or .attributes.name | split(\"(\") | first == \"$TARGET_REPO\") | .id" || true)
+          BASELINE_PROJECT_ID=$(echo "$BASELINE_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target_file == \"$FILE_PATH\" or .attributes.name | split(\"(\") | first == \"$TARGET_REPO\") | .id" || true)
           
           if [ -n "$TARGET_PROJECT_ID" ] && [ -n "$BASELINE_PROJECT_ID" ]; then
             echo "Found Target Project ID: $TARGET_PROJECT_ID for file: $FILE_PATH"
