@@ -76,7 +76,7 @@ jobs:
         CHANGED_FILES=$(echo "${{ steps.get_changed_files.outputs.changed_files }}")
         TARGET_REPO="${{ github.repository }}"
         SNYK_ORG_ID="d2de0789-91e1-4846-80a4-a1876754c378"
-        SNYK_BASELINE_ORG_ID="d2de0789-91e1-4846-80a4-a1876754c378"
+        SNYK_BASELINE_ORG_ID="964eae1d-53ee-4e80-a0c5-8b0bb6b262d3"
     
         echo "Snyk Target Organization ID: $SNYK_ORG_ID"
         echo "Snyk Baseline Organization ID: $SNYK_BASELINE_ORG_ID"
