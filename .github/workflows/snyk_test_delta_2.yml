@@ -76,7 +76,7 @@ jobs:
           echo "Running Snyk Delta for each changed file:"
           while IFS= read -r file; do
             echo "Processing file: $file"
-            PROJECT_NAME="repo/$file"
+            PROJECT_NAME="$file"
 
             # Get Current Project ID
             echo "Fetching Snyk Project ID for current: $PROJECT_NAME"
