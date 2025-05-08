@@ -46,7 +46,7 @@ jobs:
 
     - name: Install snyk-delta
       run: |
-        curl -Lo snyk-delta https://github.com/snyk-tech-services/snyk-delta
+        curl -Lo https://github.com/snyk-tech-services/snyk-delta/releases/download/v1.12.7/snyk-delta-macos
         chmod +x snyk-delta
         sudo mv snyk-delta /usr/local/bin/
         
