@@ -72,9 +72,9 @@ jobs:
         set -e
         CHANGED_FILES=$(echo "${{ steps.get_changed_files.outputs.changed_files }}")
         TARGET_REPO="${{ github.repository }}"
-        SNYK_ORG_ID="${{ secrets.SNYK_ORG_ID }}"
+        SNYK_ORG_ID="d2de0789-91e1-4846-80a4-a1876754c378"
         BASELINE_PROJECT_ID="f9b13c77-b5d6-4ab4-83e7-9b93bd9bf283" # Replace with the actual Snyk Project ID of your baseline
-        SNYK_BASELINE_ORG_ID="${{ secrets.SNYK_ORG_ID }}"
+        SNYK_BASELINE_ORG_ID="d2de0789-91e1-4846-80a4-a1876754c378"
         TARGET_PROJECT_ID="f9b13c77-b5d6-4ab4-83e7-9b93bd9bf283"
 
         echo "Snyk Organization ID: $SNYK_ORG_ID"
