@@ -141,5 +141,5 @@ jobs:
         ORG_ID="$SNYK_BASELINE_ORG_ID"
         echo "Fetching Snyk projects for org: $ORG_ID"
         BASELINE_PROJECTS_RAW=$(curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$ORG_ID/projects?limit=1000")
-    echo "Baseline Projects JSON:"
-    echo "$BASELINE_PROJECTS_RAW"
+        echo "Baseline Projects JSON:"
+        echo "$BASELINE_PROJECTS_RAW"
