@@ -73,44 +73,53 @@ jobs:
         CHANGED_FILES=$(echo "${{ steps.get_changed_files.outputs.changed_files }}")
         TARGET_REPO="${{ github.repository }}"
         SNYK_ORG_ID="d2de0789-91e1-4846-80a4-a1876754c378"
-        BASELINE_PROJECT_ID="f9b13c77-b5d6-4ab4-83e7-9b93bd9bf283" # Replace with the actual Snyk Project ID of your baseline
         SNYK_BASELINE_ORG_ID="d2de0789-91e1-4846-80a4-a1876754c378"
-        TARGET_PROJECT_ID="f9b13c77-b5d6-4ab4-83e7-9b93bd9bf283"
 
-        echo "Snyk Baseline Organization ID: $SNYK_ORG_ID"
-        echo "Baseline Snyk Project ID (Configured): $BASELINE_PROJECT_ID"
+        echo "Snyk Target Organization ID: $SNYK_ORG_ID"
+        echo "Snyk Baseline Organization ID: $SNYK_BASELINE_ORG_ID"
+        echo "Changed Files: $CHANGED_FILES"
 
-        # Fetch all projects in the Snyk organization
-        #echo "Fetching all Snyk projects for org: $SNYK_ORG_ID"
-        #ALL_PROJECTS_JSON=$(curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$SNYK_ORG_ID/projects?limit=1000") # Adjust limit if needed
+        # Function to fetch Snyk projects for a given organization ID
+        fetch_snyk_projects() {
+          ORG_ID="$1"
+          echo "Fetching all Snyk projects for org: $ORG_ID"
+          curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$ORG_ID/projects?limit=1000"
+        }
 
-        #if [ -n "$ALL_PROJECTS_JSON" ]; then
-         # echo "Processing changed files..."
-          #while IFS= read -r file; do
-           # echo "Processing file: $file"
-            #FILE_PATH="$file"
-           # #TARGET_PROJECT_ID="" # Initialize
-
-            # Find the Snyk project ID for the current repository
-            #POTENTIAL_PROJECT_ID=$(echo "$ALL_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target.name == \"$TARGET_REPO\") | .id" || true)
-
-            #if [ -n "$POTENTIAL_PROJECT_ID" ]; then
-             # TARGET_PROJECT_ID="$POTENTIAL_PROJECT_ID"
-             # echo "Found Target Snyk Project ID for repository '$TARGET_REPO': $TARGET_PROJECT_ID"
-            #else
-             # echo "Warning: Could not find a Snyk project for repository: $TARGET_REPO. Skipping delta for file: $FILE_PATH"
-              #continue
-            #fi
-
-            if [ -n "$TARGET_PROJECT_ID" ] && [ -n "$BASELINE_PROJECT_ID" ]; then
-              echo "Running snyk delta between project ID '$BASELINE_PROJECT_ID' and '$TARGET_PROJECT_ID'"
-              snyk-delta --baselineOrg="$SNYK_ORG_ID" --baselineProject="$BASELINE_PROJECT_ID" --currentOrg="$SNYK_ORG_ID" --currentProject="$TARGET_PROJECT_ID"
-              echo "-------------------------"
-            else
-              echo "Warning: Could not determine target or baseline Snyk Project ID for file: $FILE_PATH"
-            fi
-          done <<< "$CHANGED_FILES"
-        else
-          echo "Error: Could not fetch Snyk projects."
+        # Fetch all projects for the target organization
+        TARGET_PROJECTS_JSON=$(fetch_snyk_projects "$SNYK_ORG_ID")
+        if [ -z "$TARGET_PROJECTS_JSON" ]; then
+          echo "Error: Could not fetch Snyk projects for target organization: $SNYK_ORG_ID"
           exit 1
         fi
+
+        # Fetch all projects for the baseline organization
+        BASELINE_PROJECTS_JSON=$(fetch_snyk_projects "$SNYK_BASELINE_ORG_ID")
+        if [ -z "$BASELINE_PROJECTS_JSON" ]; then
+          echo "Error: Could not fetch Snyk projects for baseline organization: $SNYK_BASELINE_ORG_ID"
+          exit 1
+        fi
+
+        echo "Processing changed files..."
+        while IFS= read -r file; do
+          echo "Processing file: $file"
+          FILE_PATH="$file"
+          TARGET_PROJECT_ID=""
+          BASELINE_PROJECT_ID=""
+
+          # Try to find a matching project in the target organization based on the file path
+          TARGET_PROJECT_ID=$(echo "$TARGET_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target.path == \"$FILE_PATH\" or .attributes.target.name == \"$TARGET_REPO\") | .id" || true)
+
+          # Try to find a matching project in the baseline organization based on the file path
+          BASELINE_PROJECT_ID=$(echo "$BASELINE_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target.path == \"$FILE_PATH\" or .attributes.target.name == \"$TARGET_REPO\") | .id" || true)
+
+          if [ -n "$TARGET_PROJECT_ID" ] && [ -n "$BASELINE_PROJECT_ID" ]; then
+            echo "Found Target Project ID: $TARGET_PROJECT_ID for file: $FILE_PATH"
+            echo "Found Baseline Project ID: $BASELINE_PROJECT_ID for file: $FILE_PATH"
+            echo "Running snyk delta between project ID '$BASELINE_PROJECT_ID' (org: $SNYK_BASELINE_ORG_ID) and '$TARGET_PROJECT_ID' (org: $SNYK_ORG_ID)"
+            snyk-delta --baselineOrg="$SNYK_BASELINE_ORG_ID" --baselineProject="$BASELINE_PROJECT_ID" --currentOrg="$SNYK_ORG_ID" --currentProject="$TARGET_PROJECT_ID"
+            echo "-------------------------"
+          else
+            echo "Warning: Could not find matching Snyk projects in both target and baseline organizations for file: $FILE_PATH. Skipping delta."
+          fi
+        done <<< "$CHANGED_FILES"
