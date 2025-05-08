@@ -45,10 +45,13 @@ jobs:
         snyk auth ${{secrets.SNYK_API_TOKEN}}
 
     - name: Install snyk-delta
-      run: |
-        curl -Lo ./snyk-delta https://github.com/snyk-labs/snyk-delta/releases/latest/download/snyk-delta-linux
-        chmod +x ./snyk-delta
-        mv ./snyk-delta /usr/local/bin/
+      run: ubuntu-latest
+        curl -Lo snyk-delta https://github.com/snyk-labs/snyk-delta/releases/latest/download/snyk-delta-linux
+        chmod +x snyk-delta
+        sudo mv snyk-delta /usr/local/bin/
+        
+    - name: Verify Installation
+      run: snyk-delta --version
 
     - name: Get Changed Files
       id: get_changed_files
