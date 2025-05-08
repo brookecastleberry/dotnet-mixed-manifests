@@ -1,4 +1,4 @@
-name: Snyk Scan
+name: Snyk Scan with Curl
 
 on: workflow_dispatch
 
