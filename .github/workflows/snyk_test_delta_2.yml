@@ -116,10 +116,10 @@ jobs:
           BASELINE_PROJECT_ID=""
 
           # Try to find a matching project in the target organization based on the target_file
-          TARGET_PROJECT_ID=$(echo "$TARGET_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target_file == \"$FILE_PATH\") | .id" || true)
+          TARGET_PROJECT_ID=$(echo "$TARGET_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target_file == \"$FILE_PATH\" or .attributes.target_file == '\"$FILE_PATH\"') | .id" || true)
 
           # Try to find a matching project in the baseline organization based on the target_file
-          BASELINE_PROJECT_ID=$(echo "$BASELINE_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target_file == \"$FILE_PATH\") | .id" || true)
+          BASELINE_PROJECT_ID=$(echo "$BASELINE_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target_file == \"$FILE_PATH\" or .attributes.target_file == '\"$FILE_PATH\"') | .id" || true)
 
           if [ -n "$TARGET_PROJECT_ID" ] && [ -n "$BASELINE_PROJECT_ID" ]; then
             echo "Found Target Project ID: $TARGET_PROJECT_ID for file: $FILE_PATH (matched by target_file)"
