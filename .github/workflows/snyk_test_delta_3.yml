@@ -11,8 +11,8 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
-        fetch-depth: 0  # Fetch full history instead of a single commit
-        ref: master    # Checkout the specific commit that triggered the push
+        fetch-depth: 0  
+        ref: master    
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - uses: actions/setup-node@v4
@@ -50,9 +50,6 @@ jobs:
         chmod +x snyk-delta
         sudo mv snyk-delta /usr/local/bin/
 
-    - name: Verify Installation
-      run: snyk-delta --version
-
     - name: Install jq
       run: sudo apt-get update && sudo apt-get install -y jq
 
@@ -63,7 +60,7 @@ jobs:
         git diff --name-only HEAD^1 HEAD > changed_files.txt || true
 
         # Filter for relevant files (.csproj, .sln, .lock, .json)
-        grep -E '\.(csproj|sln|lock|json)$' changed_files.txt | grep -v 'invalid.csproj' > relevant_changed_files.txt || true
+        grep -E '\.(csproj|sln|lock|json)$' changed_files.txt > relevant_changed_files.txt || true
 
         echo "Filtered Relevant Files:"
         cat relevant_changed_files.txt || true
@@ -76,7 +73,7 @@ jobs:
         CHANGED_FILES=$(echo "${{ steps.get_changed_files.outputs.changed_files }}")
         TARGET_REPO="${{ github.repository }}"
         SNYK_ORG_ID="d2de0789-91e1-4846-80a4-a1876754c378"
-        SNYK_BASELINE_ORG_ID="964eae1d-53ee-4e80-a0c5-8b0bb6b262d3"
+        
 
         # Function to fetch Snyk projects for the target organization
         fetch_target_snyk_projects() {
@@ -84,11 +81,6 @@ jobs:
           curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$ORG_ID/projects?version=2024-10-15"
         }
 
-        # Function to fetch Snyk projects for the baseline organization
-        fetch_baseline_snyk_projects() {
-          ORG_ID="$1"
-          curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$ORG_ID/projects?version=2024-10-15"
-        }
 
         # Fetch all projects for the target organization
         TARGET_PROJECTS_JSON=$(fetch_target_snyk_projects "$SNYK_ORG_ID")
@@ -97,12 +89,7 @@ jobs:
           exit 1
         fi
 
-        # Fetch all projects for the baseline organization
-        BASELINE_PROJECTS_JSON=$(fetch_baseline_snyk_projects "$SNYK_BASELINE_ORG_ID")
-        if [ -z "$BASELINE_PROJECTS_JSON" ]; then
-          echo "Error: Could not fetch Snyk projects for baseline organization: $SNYK_BASELINE_ORG_ID"
-          exit 1
-        fi
+
 
         echo "Processing changed files..."
         while IFS= read -r file; do
@@ -110,18 +97,15 @@ jobs:
           FILE_PATH="$file"
           FILE_NAME=$(basename "$FILE_PATH")
           TARGET_PROJECT_ID=""
-          BASELINE_PROJECT_ID=""
+          
 
           # Try to find a matching project in the target organization based on the target_file
           TARGET_PROJECT_ID=$(echo "$TARGET_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target_file == \"$FILE_PATH\") | .id" || true)
 
-          # Try to find a matching project in the baseline organization based on the target_file
-          BASELINE_PROJECT_ID=$(echo "$BASELINE_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target_file == \"$FILE_PATH\") | .id" || true)
-
-          if [ -n "$TARGET_PROJECT_ID" ] && [ -n "$BASELINE_PROJECT_ID" ]; then
+          
+          if [ -n "$TARGET_PROJECT_ID" ]; then
             echo "Found Target Project ID: $TARGET_PROJECT_ID for file: $FILE_PATH (matched by target_file)"
-            echo "Found Baseline Project ID: $BASELINE_PROJECT_ID for file: $FILE_PATH (matched by target_file)"
-            echo "Running snyk delta between project ID '$BASELINE_PROJECT_ID' (org: $SNYK_BASELINE_ORG_ID) and '$TARGET_PROJECT_ID' (org: $SNYK_ORG_ID)"
+            echo "Running snyk delta between project ID for '$TARGET_PROJECT_ID' (org: $SNYK_ORG_ID)"
             snyk-delta --baselineOrg="$SNYK_ORG_ID" --baselineProject="$TARGET_PROJECT_ID" --currentOrg="$SNYK_ORG_ID" --currentProject="$TARGET_PROJECT_ID" --targetReference master
             echo "-------------------------"
           else
