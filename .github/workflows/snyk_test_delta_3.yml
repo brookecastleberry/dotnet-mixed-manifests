@@ -90,8 +90,6 @@ jobs:
         fi
 
 
-
-        echo "Processing changed files..."
         while IFS= read -r file; do
           echo "Processing file: $file"
           FILE_PATH="$file"
