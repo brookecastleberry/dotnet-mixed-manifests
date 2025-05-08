@@ -53,6 +53,9 @@ jobs:
     - name: Verify Installation
       run: snyk-delta --version
 
+    - name: Install jq
+      run: sudo apt-get update && sudo apt-get install -y jq
+
     - name: Get Changed Files
       id: get_changed_files
       run: |
