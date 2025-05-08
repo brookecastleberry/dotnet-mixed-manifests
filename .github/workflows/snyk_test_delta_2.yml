@@ -95,14 +95,14 @@ jobs:
         }
 
         # Fetch all projects for the target organization
-        TARGET_PROJECTS_JSON=$(fetch_target_snyk_projects)
+        TARGET_PROJECTS_JSON=$(fetch_target_snyk_projects "$SNYK_ORG_ID")
         if [ -z "$TARGET_PROJECTS_JSON" ]; then
           echo "Error: Could not fetch Snyk projects for target organization: $SNYK_ORG_ID"
           exit 1
         fi
 
         # Fetch all projects for the baseline organization
-        BASELINE_PROJECTS_JSON=$(fetch_baseline_snyk_projects)
+        BASELINE_PROJECTS_JSON=$(fetch_baseline_snyk_projects "$SNYK_BASELINE_ORG_ID")
         if [ -z "$BASELINE_PROJECTS_JSON" ]; then
           echo "Error: Could not fetch Snyk projects for baseline organization: $SNYK_BASELINE_ORG_ID"
           exit 1
