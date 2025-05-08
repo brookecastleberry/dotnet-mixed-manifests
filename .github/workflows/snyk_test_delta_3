@@ -1,0 +1,134 @@
+name: Snyk Scan with Curl
+
+on: workflow_dispatch
+
+jobs:
+  snyk-sca:
+    name: Snyk SCA Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        ref: master  # Checkout the specific commit that triggered the push
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: |
+        find . -name "*.csproj" -exec dotnet restore {} \;
+
+    - name: Install Snyk CLI
+      run: |
+        curl -Lo ./snyk https://static.snyk.io/cli/latest/snyk-linux
+        chmod +x ./snyk
+        mv ./snyk /usr/local/bin/
+
+    - name: Install snyk-to-html
+      run: |
+        curl -Lo ./snyk-to-html https://github.com/snyk/snyk-to-html/releases/latest/download/snyk-to-html-linux
+        chmod +x ./snyk-to-html
+        mv ./snyk-to-html /usr/local/bin/
+
+    - name: SNYK auth
+      run: |
+        snyk auth ${{secrets.SNYK_API_TOKEN}}
+
+    - name: Install snyk-delta
+      run: |
+        curl -Lo snyk-delta https://github.com/snyk-tech-services/snyk-delta/releases/download/v1.12.7/snyk-delta-linux
+        chmod +x snyk-delta
+        sudo mv snyk-delta /usr/local/bin/
+        
+    - name: Verify Installation
+      run: snyk-delta --version
+
+    - name: Install jq
+      run: sudo apt-get update && sudo apt-get install -y jq
+
+    - name: Get Changed Files
+      id: get_changed_files
+      run: |
+        # Get the list of modified files
+        git diff --name-only HEAD^1 HEAD > changed_files.txt || true
+
+        # Filter for relevant files (.csproj, .sln, .lock, .json)
+        grep -E '\.(csproj|sln|lock|json)$' changed_files.txt | grep -v 'invalid.csproj' > relevant_changed_files.txt || true
+
+        echo "Filtered Relevant Files:"
+        cat relevant_changed_files.txt || true
+
+        echo "changed_files=$(cat relevant_changed_files.txt)" >> "$GITHUB_OUTPUT"
+
+    - name: Run Snyk Delta on Changed Files
+      run: |
+        set -e
+        CHANGED_FILES=$(echo "${{ steps.get_changed_files.outputs.changed_files }}")
+        TARGET_REPO="${{ github.repository }}"
+        SNYK_ORG_ID="d2de0789-91e1-4846-80a4-a1876754c378"
+      
+    
+        echo "Snyk Target Organization ID: $SNYK_ORG_ID"
+        echo "Changed Files: $CHANGED_FILES"
+        echo "$CHANGED_FILES" # Added to debug changed files
+    
+        # Function to fetch Snyk projects for the target organization
+        fetch_target_snyk_projects() {
+          ORG_ID="$1"
+          curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$ORG_ID/projects?version=2024-10-15"
+        }
+    
+    
+        # Fetch all projects for the target organization
+        TARGET_PROJECTS_JSON=$(fetch_target_snyk_projects "$SNYK_ORG_ID")
+        if [ -z "$TARGET_PROJECTS_JSON" ]; then
+          echo "Error: Could not fetch Snyk projects for target organization: $SNYK_ORG_ID"
+          exit 1
+        fi
+    
+    
+        echo "Processing changed files..."
+        while IFS= read -r file; do
+          echo "Processing file: $file"
+          FILE_PATH="$file"
+          # FILE_PATH_QUOTED="'$FILE_PATH'" # Removed
+          FILE_NAME=$(basename "$FILE_PATH")
+          TARGET_PROJECT_ID=""
+          
+    
+          # Debug: Print the exact jq command being executed for target
+          echo "DEBUG: jq command (target): echo '$TARGET_PROJECTS_JSON' | jq -r '.data[] | select(.attributes.target_file == \"$FILE_PATH\") | .id'"
+    
+          # Try to find a matching project in the target organization based on the target_file
+          TARGET_PROJECT_ID=$(echo "$TARGET_PROJECTS_JSON" | jq -r ".data[] | select(.attributes.target_file == \"$FILE_PATH\") | .id" || true)
+    
+          
+          if [ -n "$TARGET_PROJECT_ID" ]; then
+            echo "Found Target Project ID: $TARGET_PROJECT_ID for file: $FILE_PATH (matched by target_file)"
+            echo "Running snyk delta for '$TARGET_PROJECT_ID' (org: $SNYK_ORG_ID)"
+            snyk-delta --currentOrg="$SNYK_ORG_ID" --currentProject="$TARGET_PROJECT_ID" --targetReference master 
+            echo "-------------------------"
+          else
+            echo "Warning: Could not find matching Snyk projects in both target and baseline organizations for file: $FILE_PATH (searched by target_file). Skipping delta."
+          fi
+        done <<< "$CHANGED_FILES"
+    
+    
+    
+    - name: Debug - Print Snyk Projects Response (Target)
+      run: |
+        echo "Fetching Snyk projects for org: $SNYK_ORG_ID"
+        TARGET_PROJECTS_RAW=$(curl -s -H "Authorization: token ${{ secrets.SNYK_API_TOKEN }}" "https://api.snyk.io/rest/orgs/$SNYK_ORG_ID/projects?version=2024-10-15")
+        echo "Target Projects JSON:"
+        echo "$TARGET_PROJECTS_RAW"
+    
+    
