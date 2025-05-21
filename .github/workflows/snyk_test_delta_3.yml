@@ -53,6 +53,13 @@ jobs:
     - name: Install jq
       run: sudo apt-get update && sudo apt-get install -y jq
 
+    - name: Run Snyk Monitor
+      run: |
+        SNYK_ORG_ID="d2de0789-91e1-4846-80a4-a1876754c378" 
+        snyk monitor --org=$SNYK_ORG_ID --all-projects --fail-on=all 
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_API_TOKEN }}
+
     - name: Get Changed Files
       id: get_changed_files
       run: |
