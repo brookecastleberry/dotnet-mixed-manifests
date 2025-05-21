@@ -74,8 +74,8 @@ jobs:
         # Get the list of modified files
         git diff --name-only HEAD^1 HEAD > changed_files.txt || true
 
-        # Filter for relevant files (.csproj, .sln, .lock, .json)
-        grep -E '\.(csproj|sln|lock|json)$' changed_files.txt > relevant_changed_files.txt || true
+        # Filter for relevant files (.csproj, .sln, .lock, .json .config) 
+        grep -E '\.(csproj|sln|lock|json|config)$' changed_files.txt > relevant_changed_files.txt || true
 
         echo "Filtered Relevant Files:"
         cat relevant_changed_files.txt || true
