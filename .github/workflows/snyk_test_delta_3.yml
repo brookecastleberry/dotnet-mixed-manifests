@@ -58,7 +58,7 @@ jobs:
         SNYK_ORG_ID="d2de0789-91e1-4846-80a4-a1876754c378" 
         find . -name "*.csproj" -o -name "*.sln" | while read -r manifest_file; do
           echo "Running snyk monitor for: $manifest_file"
-          snyk monitor "$manifest_file" \
+          snyk monitor --file="$manifest_file" \
             --org=$SNYK_ORG_ID \
             --fail-on=all \
             --dotnet-runtime-resolution \
