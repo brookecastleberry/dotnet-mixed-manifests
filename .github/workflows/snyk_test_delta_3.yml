@@ -118,7 +118,7 @@ jobs:
           if [ -n "$TARGET_PROJECT_ID" ]; then
             echo "Found Target Project ID: $TARGET_PROJECT_ID for file: $FILE_PATH (matched by target_file)"
             echo "Running snyk delta for project ID for '$TARGET_PROJECT_ID' (org: $SNYK_ORG_ID)"
-            snyk-delta --dotnet-runtime-resolution --baselineOrg="f7ed4dbe-e863-4b58-b201-904bb22dabd0" --baselineProject="ceca0e88-0a97-40b7-8d7f-7dd937d0cf55" --currentOrg="$SNYK_ORG_ID" --currentProject="$TARGET_PROJECT_ID" --targetReference master
+            snyk-delta --dotnet-runtime-resolution --baselineOrg="f7ed4dbe-e863-4b58-b201-904bb22dabd0" --baselineProject="ceca0e88-0a97-40b7-8d7f-7dd937d0cf55" --currentOrg="$SNYK_ORG_ID" --currentProject="f9b13c77-b5d6-4ab4-83e7-9b93bd9bf283" --targetReference master
           else
             echo "Warning: Could not find matching Snyk projects in both target organization for file: $FILE_PATH (searched by target_file). Skipping delta."
           fi
